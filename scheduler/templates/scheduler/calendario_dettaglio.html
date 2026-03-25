@@ -1,0 +1,272 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Calendario {{ calendario }}{% endblock %}
+
+{% block content %}
+
+<style>
+.turno-m { background:#dbeafe; color:#1d4ed8; font-weight:bold; }
+.turno-p { background:#fef3c7; color:#92400e; font-weight:bold; }
+.turno-n { background:#fee2e2; color:#b91c1c; font-weight:bold; }
+.turno-r { background:#e5e7eb; color:#374151; font-weight:bold; }
+.turno-f { background:#dcfce7; color:#166534; font-weight:bold; }
+.turno-a { background:#e0e7ff; color:#3730a3; font-weight:bold; }
+.turno-l { background:#fce7f3; color:#be185d; font-weight:bold; }
+.turno-x { background:#ede9fe; color:#6d28d9; font-weight:bold; }
+
+.giorno-weekend {
+    background:#f3f4f6 !important;
+}
+
+.cell-dipendente{
+    position:sticky;
+    left:0;
+    background:white;
+    z-index:2;
+}
+
+.header-dipendente{
+    position:sticky;
+    left:0;
+    z-index:3;
+    background:#edf3fb;
+}
+
+.tabella-calendario th,
+.tabella-calendario td{
+    min-width:44px;
+}
+
+.tabella-calendario td.cell-dipendente,
+.tabella-calendario th.header-dipendente{
+    min-width:180px;
+}
+
+.turno-link{
+    display:block;
+    text-decoration:none;
+    color:inherit;
+    padding:2px;
+}
+
+.copertura-ok{
+    background:#dcfce7;
+    color:#166534;
+    font-weight:bold;
+}
+
+.copertura-ko{
+    background:#fee2e2;
+    color:#991b1b;
+    font-weight:bold;
+}
+
+.riga-copertura-label{
+    background:#f8fafc;
+    font-weight:bold;
+}
+
+.equita-ok{
+    background:#dcfce7;
+    color:#166534;
+    border-radius:999px;
+    padding:4px 8px;
+    display:inline-block;
+    font-weight:bold;
+}
+
+.equita-alto{
+    background:#fee2e2;
+    color:#991b1b;
+    border-radius:999px;
+    padding:4px 8px;
+    display:inline-block;
+    font-weight:bold;
+}
+
+.equita-basso{
+    background:#fef3c7;
+    color:#92400e;
+    border-radius:999px;
+    padding:4px 8px;
+    display:inline-block;
+    font-weight:bold;
+}
+
+.equita-na{
+    background:#e5e7eb;
+    color:#374151;
+    border-radius:999px;
+    padding:4px 8px;
+    display:inline-block;
+    font-weight:bold;
+}
+</style>
+
+<div class="card">
+
+    <div class="top-actions">
+        <div>
+            <h2>Calendario {{ calendario }}</h2>
+            <p class="muted">Vista completa della turnistica mensile.</p>
+        </div>
+
+        <div>
+            <a class="btn" href="{% url 'calendari_lista' %}">Torna ai calendari</a>
+            <a class="btn btn-secondary" href="{% url 'genera_turni' calendario.id %}">Rigenera turni</a>
+	    
+	    <form method="post" action="{% url 'ripianifica_calendario' calendario.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn btn-light" type="submit">Ripianifica calendario</button>
+            </form>
+            <a class="btn btn-light" href="{% url 'esporta_calendario_excel' calendario.id %}">Esporta Excel</a>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+        <div style="background:#eef5ff;padding:10px 14px;border-radius:10px;">
+            <strong>Media turni full-time:</strong> {{ media_full_time }}
+        </div>
+
+        <div style="background:#f0fdf4;padding:10px 14px;border-radius:10px;">
+            <strong>Media turni part-time:</strong> {{ media_part_time }}
+        </div>
+
+        <div style="background:#fff7ed;padding:10px 14px;border-radius:10px;">
+            <strong>Media notti (solo full-time):</strong> {{ media_notti }}
+        </div>
+	    <div style="background:#ecfeff;padding:10px 14px;border-radius:10px;">
+            <strong>Media weekend full-time:</strong> {{ media_weekend_full_time }}
+	</div>
+
+	<div style="background:#f0fdfa;padding:10px 14px;border-radius:10px;">
+    	    <strong>Media weekend part-time:</strong> {{ media_weekend_part_time }}
+	</div>
+
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table class="tabella-calendario">
+            <thead>
+                <tr>
+                    <th class="text-left header-dipendente">Dipendente</th>
+
+                    {% for g in giorni %}
+                    <th class="{% if g.weekend %}giorno-weekend{% endif %}">
+                        {{ g.sigla }}<br>{{ g.numero }}
+                    </th>
+                    {% endfor %}
+
+                    <th>M</th>
+                    <th>P</th>
+                    <th>N</th>
+                    <th>R</th>
+                    <th>Tot</th>
+                    <th>Weekend</th>
+                    <th>Equità turni</th>
+                    <th>Equità notti</th>
+                    <th>Equità weekend</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for riga in righe %}
+                <tr>
+                    <td class="text-left cell-dipendente">
+                        {{ riga.dipendente.cognome }} {{ riga.dipendente.nome }}
+                    </td>
+
+                    {% for turno in riga.turni %}
+                    <td class="
+                        {% if turno.weekend %}giorno-weekend {% endif %}
+                        {% if turno.valore == 'M' %}turno-m{% endif %}
+                        {% if turno.valore == 'P' %}turno-p{% endif %}
+                        {% if turno.valore == 'N' %}turno-n{% endif %}
+                        {% if turno.valore == 'R' %}turno-r{% endif %}
+                        {% if turno.valore == 'F' %}turno-f{% endif %}
+                        {% if turno.valore == 'A' %}turno-a{% endif %}
+                        {% if turno.valore == 'L' %}turno-l{% endif %}
+                        {% if turno.valore == 'X' %}turno-x{% endif %}
+                    ">
+                        {% if turno.id %}
+                        <a class="turno-link" href="{% url 'modifica_turno' turno.id %}">
+                            {{ turno.valore }}
+                        </a>
+                        {% else %}
+                        {{ turno.valore }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+
+                    <td>{{ riga.riepilogo.M }}</td>
+                    <td>{{ riga.riepilogo.P }}</td>
+                    <td>{{ riga.riepilogo.N }}</td>
+                    <td>{{ riga.riepilogo.R }}</td>
+                    <td><strong>{{ riga.riepilogo.totale }}</strong></td>
+                    <td><strong>{{ riga.riepilogo.weekend_lavorati }}</strong></td>
+
+                    <td>
+                        {% if riga.equita_totale == "ok" %}
+                        <span class="equita-ok">Equo</span>
+                        {% elif riga.equita_totale == "alto" %}
+                        <span class="equita-alto">Sopra media</span>
+                        {% else %}
+                        <span class="equita-basso">Sotto media</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if riga.equita_notti == "non_previsto" %}
+                        <span class="equita-na">Non previsto</span>
+                        {% elif riga.equita_notti == "ok" %}
+                        <span class="equita-ok">Equo</span>
+                        {% elif riga.equita_notti == "alto" %}
+                        <span class="equita-alto">Troppe notti</span>
+                        {% else %}
+                        <span class="equita-basso">Poche notti</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if riga.equita_weekend == "ok" %}
+                        <span class="equita-ok">Equo</span>
+                        {% elif riga.equita_weekend == "alto" %}
+                        <span class="equita-alto">Troppi weekend</span>
+                        {% else %}
+                        <span class="equita-basso">Pochi weekend</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="60">Nessuna assegnazione presente.</td>
+                </tr>
+                {% endfor %}
+
+                {% for riga in coperture_righe %}
+                <tr>
+                    <td class="text-left cell-dipendente riga-copertura-label">
+                        Copertura {{ riga.label }}
+                    </td>
+
+                    {% for valore in riga.valori %}
+                    <td class="
+                        {% if valore.ok %}copertura-ok{% else %}copertura-ko{% endif %}
+                        {% if valore.weekend %}giorno-weekend{% endif %}
+                    ">
+                        {{ valore.conteggio }}/{{ valore.richiesto }}
+                    </td>
+                    {% endfor %}
+
+                    <td colspan="8" class="riga-copertura-label">
+                        Verifica {{ riga.label }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

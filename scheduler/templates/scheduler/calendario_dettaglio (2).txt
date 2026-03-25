@@ -1,0 +1,49 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Calendario {{ calendario }}{% endblock %}
+
+{% block content %}
+<div class="topbar">
+    <div>
+        <h2>Calendario mensile {{ calendario }}</h2>
+        <p>Distribuzione automatica dei turni del mese.</p>
+    </div>
+    <div>
+        <a class="btn" href="{% url 'dashboard' %}">Torna alla dashboard</a>
+        <a class="btn btn-secondary" href="{% url 'genera_turni' calendario.id %}">Rigenera turni</a>
+    </div>
+</div>
+
+<div class="card" style="overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th class="nome-colonna">Dipendente</th>
+                {% for g in giorni %}
+                    <th>{{ g }}</th>
+                {% endfor %}
+                <th>M</th>
+                <th>P</th>
+                <th>N</th>
+                <th>R</th>
+                <th>Tot</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for riga in righe %}
+            <tr>
+                <td class="nome-colonna">{{ riga.dipendente.cognome }} {{ riga.dipendente.nome }}</td>
+                {% for turno in riga.turni %}
+                    <td class="turno-{{ turno }}">{{ turno }}</td>
+                {% endfor %}
+                <td>{{ riga.riepilogo.M }}</td>
+                <td>{{ riga.riepilogo.P }}</td>
+                <td>{{ riga.riepilogo.N }}</td>
+                <td>{{ riga.riepilogo.R }}</td>
+                <td>{{ riga.riepilogo.totale }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}{{ titolo }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 700px;">
+    <h2>{{ titolo }}</h2>
+    <p>{{ messaggio }}</p>
+    <p><strong>{{ oggetto }}</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn" type="submit">Conferma eliminazione</button>
+        <a class="btn btn-secondary" href="{% url url_annulla %}">Annulla</a>
+    </form>
+</div>
+{% endblock %}

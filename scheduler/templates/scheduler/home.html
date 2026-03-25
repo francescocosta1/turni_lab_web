@@ -1,0 +1,24 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Accesso alla piattaforma</h2>
+    <p>Seleziona l'area di accesso in base al tuo ruolo.</p>
+
+    <div class="grid">
+        <div class="tile">
+            <h3>Area amministratore</h3>
+            <p>Accesso riservato al personale autorizzato alla gestione della turnistica.</p>
+            <a class="btn" href="{% url 'login_view' %}?next=/admin-dashboard/">Accedi come amministratore</a>
+        </div>
+
+        <div class="tile">
+            <h3>Area dipendente</h3>
+            <p>Accesso riservato ai dipendenti per la consultazione dei turni.</p>
+            <a class="btn btn-secondary" href="{% url 'login_view' %}?next=/dipendente-dashboard/">Accedi come dipendente</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

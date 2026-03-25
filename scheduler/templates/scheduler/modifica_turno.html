@@ -1,0 +1,52 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Modifica turno{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width:600px">
+
+<h2>Modifica turno</h2>
+
+<p class="muted">
+{{ assegnazione.dipendente.cognome }} {{ assegnazione.dipendente.nome }}  
+<br>
+{{ assegnazione.data|date:"d/m/Y" }}
+</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>Turno</label>
+
+<select name="turno">
+
+{% for codice, nome in turni %}
+
+<option value="{{ codice }}"
+{% if assegnazione.turno == codice %}selected{% endif %}
+>
+
+{{ nome }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<button class="btn">Salva modifica</button>
+
+<a class="btn btn-secondary"
+href="{% url 'calendario_dettaglio' assegnazione.calendario.id %}">
+Annulla
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

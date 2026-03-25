@@ -1,0 +1,16 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Nuovo calendario{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <h2>Nuovo calendario mensile</h2>
+    <p class="muted">Inserisci mese e anno da pianificare.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Salva</button>
+    </form>
+</div>
+{% endblock %}

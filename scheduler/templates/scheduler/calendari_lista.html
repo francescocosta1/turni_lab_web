@@ -1,0 +1,46 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Calendari mensili{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="top-actions">
+        <div>
+            <h2>Calendari mensili</h2>
+            <p class="muted">Gestione dei mesi di turnazione del laboratorio.</p>
+        </div>
+        <div>
+            <a class="btn" href="{% url 'calendario_nuovo' %}">Nuovo mese</a>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Mese</th>
+                <th>Stato</th>
+                <th>Creato il</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for calendario in calendari %}
+            <tr>
+                <td>{{ calendario }}</td>
+                <td>{{ calendario.get_stato_display }}</td>
+                <td>{{ calendario.creato_il|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a class="btn" href="{% url 'calendario_dettaglio' calendario.id %}">Apri</a>
+                    <a class="btn btn-secondary" href="{% url 'genera_turni' calendario.id %}">Genera turni</a>
+                    <a class="btn btn-secondary" href="{% url 'calendario_elimina' calendario.id %}">Elimina</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Nessun calendario disponibile.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

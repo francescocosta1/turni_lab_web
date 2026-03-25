@@ -1,0 +1,181 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Dipendenti{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <div class="top-actions">
+
+        <div>
+            <h2>Dipendenti</h2>
+            <p class="muted">Gestione del personale del laboratorio.</p>
+
+            <div style="display:flex; gap:15px; margin-top:10px; flex-wrap:wrap;">
+
+                <div style="background:#eef5ff; padding:10px 15px; border-radius:10px;">
+                    <strong>Totale:</strong> {{ totale }}
+                </div>
+
+                <div style="background:#dbeafe; padding:10px 15px; border-radius:10px;">
+                    <strong>Senior:</strong> {{ senior }}
+                </div>
+
+                <div style="background:#fef3c7; padding:10px 15px; border-radius:10px;">
+                    <strong>Junior:</strong> {{ junior }}
+                </div>
+
+                <div style="background:#dcfce7; padding:10px 15px; border-radius:10px;">
+                    <strong>Attivi:</strong> {{ attivi }}
+                </div>
+
+            </div>
+
+            <form method="get" style="margin-top:15px; display:flex; gap:8px; flex-wrap:wrap;">
+
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Cerca per nome o cognome..."
+                    value="{{ query }}"
+                    style="padding:10px; border-radius:8px; border:1px solid #ccc; width:250px;"
+                >
+
+                <button class="btn btn-light" type="submit">
+                    Cerca
+                </button>
+
+                <a class="btn btn-secondary" href="{% url 'dipendenti_lista' %}">
+                    Reset
+                </a>
+
+            </form>
+
+        </div>
+
+        <div>
+            <a class="btn" href="{% url 'dipendente_nuovo' %}">
+                Nuovo dipendente
+            </a>
+        </div>
+
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table>
+
+            <thead>
+                <tr>
+                    <th class="text-left">Nome</th>
+                    <th class="text-left">Cognome</th>
+                    <th>Nascita</th>
+                    <th>Livello</th>
+                    <th>Contratto</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for d in dipendenti %}
+
+                <tr>
+
+                    <td class="text-left">
+                        {{ d.nome }}
+                    </td>
+
+                    <td class="text-left">
+                        <strong>{{ d.cognome }}</strong>
+                    </td>
+
+                    <td>
+                        {% if d.data_nascita %}
+                            {{ d.data_nascita|date:"d/m/Y" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if d.livello == "senior" %}
+                            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:bold;">
+                                Senior
+                            </span>
+                        {% else %}
+                            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#fef3c7; color:#92400e; font-weight:bold;">
+                                Junior
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if d.tipo_contratto == "full_time" %}
+                            <span
+                                title="Full-time"
+                                style="display:inline-block; padding:6px 10px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:bold;"
+                            >
+                                FT
+                            </span>
+                        {% else %}
+                            <span
+                                title="Part-time"
+                                style="display:inline-block; padding:6px 10px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:bold;"
+                            >
+                                PT
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if d.attivo %}
+                            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:bold;">
+                                Attivo
+                            </span>
+                        {% else %}
+                            <span style="display:inline-block; padding:6px 10px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:bold;">
+                                Non attivo
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+
+                        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+
+                            <a class="btn btn-light"
+                               href="{% url 'dipendente_modifica' d.id %}">
+                                Modifica
+                            </a>
+
+                            <a class="btn btn-secondary"
+                               href="{% url 'dipendente_elimina' d.id %}">
+                                Elimina
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                {% empty %}
+
+                <tr>
+                    <td colspan="7">
+                        Nessun dipendente trovato.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Nuovo dipendente{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+<h2>{{ titolo|default:"Nuovo dipendente" }}</h2>
+
+<form method="post">
+
+{% csrf_token %}
+
+{{ form.as_p }}
+
+<button class="btn">Salva</button>
+
+</form>
+
+</div>
+
+{% endblock %}

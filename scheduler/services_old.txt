@@ -1,0 +1,273 @@
+import calendar
+import random
+from collections import defaultdict
+from datetime import date, timedelta
+
+from .models import Dipendente, AssegnazioneTurno, CalendarioMensile, Assenza
+
+
+MAX_TURNI_CONSECUTIVI = 5
+
+
+def fabbisogno_giornaliero(data_corrente):
+    """
+    Caso pseudo-reale:
+    - lun-ven: M 7, P 5, N 1
+    - sabato:  M 5, P 4, N 1
+    - domenica: M 4, P 3, N 1
+    """
+    giorno_settimana = data_corrente.weekday()
+
+    if giorno_settimana <= 4:
+        return {"M": 7, "P": 5, "N": 1}
+    elif giorno_settimana == 5:
+        return {"M": 5, "P": 4, "N": 1}
+    else:
+        return {"M": 4, "P": 3, "N": 1}
+
+
+def target_mensile(dipendente):
+    """
+    Target mensile realistico:
+    - full-time 36h -> più turni
+    - part-time 30h -> meno turni
+    """
+    if dipendente.tipo_contratto == "full_time":
+        return 22
+    return 18
+
+
+def genera_turni_mese(calendario_mensile: CalendarioMensile):
+    dipendenti = list(Dipendente.objects.filter(attivo=True).order_by("cognome", "nome"))
+
+    if len(dipendenti) < 8:
+        raise ValueError("Servono almeno 8 dipendenti attivi per coprire i turni giornalieri.")
+
+    anno = calendario_mensile.anno
+    mese = calendario_mensile.mese
+    giorni_del_mese = calendar.monthrange(anno, mese)[1]
+
+    AssegnazioneTurno.objects.filter(calendario=calendario_mensile).delete()
+
+    conteggi = {
+        d.id: {
+            "totale_lavorati": 0,
+            "M": 0,
+            "P": 0,
+            "N": 0,
+            "R": 0,
+            "F": 0,
+            "A": 0,
+            "L": 0,
+            "X": 0,
+            "weekend_lavorati": 0,
+            "consecutivi": 0,
+        }
+        for d in dipendenti
+    }
+
+    assegnazioni_per_data = defaultdict(dict)
+
+    assenze = Assenza.objects.filter(
+        dipendente__in=dipendenti,
+        data_inizio__lte=date(anno, mese, giorni_del_mese),
+        data_fine__gte=date(anno, mese, 1),
+    ).select_related("dipendente")
+
+    tipo_to_sigla = {
+        "ferie": "F",
+        "assenza": "A",
+        "malattia": "L",
+        "permesso": "X",
+    }
+
+    mappa_assenze = defaultdict(dict)
+    for assenza in assenze:
+        giorno_corrente = max(assenza.data_inizio, date(anno, mese, 1))
+        ultimo_giorno = min(assenza.data_fine, date(anno, mese, giorni_del_mese))
+
+        while giorno_corrente <= ultimo_giorno:
+            mappa_assenze[giorno_corrente][assenza.dipendente_id] = tipo_to_sigla.get(assenza.tipo, "A")
+            giorno_corrente += timedelta(days=1)
+
+    # distribuzione ciclica: ogni generazione parte in ordine diverso
+    offset_ciclico = random.randint(0, len(dipendenti) - 1)
+    dipendenti = dipendenti[offset_ciclico:] + dipendenti[:offset_ciclico]
+
+    def assegnato_oggi(dipendente_id, giorno_corrente):
+        return dipendente_id in assegnazioni_per_data.get(giorno_corrente, {})
+
+    def assente_oggi(dipendente_id, giorno_corrente):
+        return dipendente_id in mappa_assenze.get(giorno_corrente, {})
+
+    def ha_notte_il_giorno_prima(dipendente_id, giorno_corrente):
+        giorno_precedente = giorno_corrente - timedelta(days=1)
+        return assegnazioni_per_data.get(giorno_precedente, {}).get(dipendente_id) == "N"
+
+    def e_weekend(giorno_corrente):
+        return giorno_corrente.weekday() >= 5
+
+    def aggiorna_consecutivi(giorno_corrente):
+        if giorno_corrente.day == 1:
+            for d in dipendenti:
+                turno_oggi = assegnazioni_per_data[giorno_corrente].get(d.id)
+                conteggi[d.id]["consecutivi"] = 1 if turno_oggi in ["M", "P", "N"] else 0
+            return
+
+        giorno_precedente = giorno_corrente - timedelta(days=1)
+        for d in dipendenti:
+            turno_oggi = assegnazioni_per_data[giorno_corrente].get(d.id)
+            turno_ieri = assegnazioni_per_data[giorno_precedente].get(d.id)
+
+            lavora_oggi = turno_oggi in ["M", "P", "N"]
+            lavora_ieri = turno_ieri in ["M", "P", "N"]
+
+            if lavora_oggi and lavora_ieri:
+                conteggi[d.id]["consecutivi"] += 1
+            elif lavora_oggi:
+                conteggi[d.id]["consecutivi"] = 1
+            else:
+                conteggi[d.id]["consecutivi"] = 0
+
+    def punteggio_generale(d, turno, giorno_corrente):
+        """
+        Punteggio basso = candidato migliore.
+        Tiene conto di:
+        - target mensile
+        - equità notti solo per full-time
+        - weekend equi
+        - turni consecutivi
+        - diverso peso tra full-time e part-time
+        """
+        totale = conteggi[d.id]["totale_lavorati"]
+        target = target_mensile(d)
+        rapporto_carico = totale / target if target else totale
+
+        weekend_penalty = conteggi[d.id]["weekend_lavorati"] * 0.35 if e_weekend(giorno_corrente) else 0
+        consecutivi_penalty = 100 if conteggi[d.id]["consecutivi"] >= MAX_TURNI_CONSECUTIVI else conteggi[d.id]["consecutivi"] * 0.4
+
+        if turno == "N":
+            # solo full-time; si privilegia chi ha meno notti
+            return (
+                conteggi[d.id]["N"],
+                rapporto_carico,
+                weekend_penalty,
+                consecutivi_penalty,
+                totale,
+            )
+
+        # per i part-time contano di più M/P che il totale globale
+        if d.tipo_contratto == "part_time":
+            carico_diurno = conteggi[d.id]["M"] + conteggi[d.id]["P"]
+            rapporto_diurno = carico_diurno / target if target else carico_diurno
+            return (
+                rapporto_diurno,
+                conteggi[d.id][turno],
+                weekend_penalty,
+                consecutivi_penalty,
+                totale,
+            )
+
+        # full-time: il totale include anche il peso delle notti
+        return (
+            rapporto_carico,
+            conteggi[d.id][turno],
+            conteggi[d.id]["N"] * 0.25,
+            weekend_penalty,
+            consecutivi_penalty,
+            totale,
+        )
+
+    def ordina_candidati(candidati, turno, giorno_corrente):
+        candidati = candidati[:]
+        random.shuffle(candidati)
+        return sorted(candidati, key=lambda d: punteggio_generale(d, turno, giorno_corrente))
+
+    for giorno in range(1, giorni_del_mese + 1):
+        data_corrente = date(anno, mese, giorno)
+        fabbisogno = fabbisogno_giornaliero(data_corrente)
+
+        # 1. Assenze
+        for dipendente in dipendenti:
+            if assente_oggi(dipendente.id, data_corrente):
+                sigla_assenza = mappa_assenze[data_corrente][dipendente.id]
+                assegnazioni_per_data[data_corrente][dipendente.id] = sigla_assenza
+                conteggi[dipendente.id][sigla_assenza] += 1
+
+        # 2. Riposo obbligatorio dopo la notte
+        for dipendente in dipendenti:
+            if ha_notte_il_giorno_prima(dipendente.id, data_corrente) and not assegnato_oggi(dipendente.id, data_corrente):
+                assegnazioni_per_data[data_corrente][dipendente.id] = "R"
+                conteggi[dipendente.id]["R"] += 1
+
+        # 3. Notte: solo full-time
+        candidati_notte = [
+            d for d in dipendenti
+            if d.tipo_contratto == "full_time"
+            and not assegnato_oggi(d.id, data_corrente)
+            and conteggi[d.id]["consecutivi"] < MAX_TURNI_CONSECUTIVI
+        ]
+
+        candidati_notte = ordina_candidati(candidati_notte, "N", data_corrente)
+
+        if len(candidati_notte) < fabbisogno["N"]:
+            raise ValueError(
+                f"Impossibile assegnare {fabbisogno['N']} notti il {data_corrente}: personale full-time insufficiente."
+            )
+
+        for scelto_notte in candidati_notte[:fabbisogno["N"]]:
+            assegnazioni_per_data[data_corrente][scelto_notte.id] = "N"
+            conteggi[scelto_notte.id]["N"] += 1
+            conteggi[scelto_notte.id]["totale_lavorati"] += 1
+            if e_weekend(data_corrente):
+                conteggi[scelto_notte.id]["weekend_lavorati"] += 1
+
+        # 4. Mattina e pomeriggio
+        for turno in ["M", "P"]:
+            candidati = [
+                d for d in dipendenti
+                if not assegnato_oggi(d.id, data_corrente)
+                and conteggi[d.id]["consecutivi"] < MAX_TURNI_CONSECUTIVI
+            ]
+
+            candidati = ordina_candidati(candidati, turno, data_corrente)
+
+            if len(candidati) < fabbisogno[turno]:
+                raise ValueError(
+                    f"Impossibile assegnare {fabbisogno[turno]} persone al turno {turno} per il {data_corrente}: personale insufficiente."
+                )
+
+            scelti = candidati[:fabbisogno[turno]]
+            for dipendente in scelti:
+                assegnazioni_per_data[data_corrente][dipendente.id] = turno
+                conteggi[dipendente.id][turno] += 1
+                conteggi[dipendente.id]["totale_lavorati"] += 1
+                if e_weekend(data_corrente):
+                    conteggi[dipendente.id]["weekend_lavorati"] += 1
+
+        # 5. Riposo per chi resta
+        for dipendente in dipendenti:
+            if not assegnato_oggi(dipendente.id, data_corrente):
+                assegnazioni_per_data[data_corrente][dipendente.id] = "R"
+                conteggi[dipendente.id]["R"] += 1
+
+        # 6. Aggiorna consecutivi a fine giornata
+        aggiorna_consecutivi(data_corrente)
+
+    nuove_assegnazioni = []
+    for giorno_data, assegnazioni_giornaliere in assegnazioni_per_data.items():
+        for dipendente_id, turno in assegnazioni_giornaliere.items():
+            nuove_assegnazioni.append(
+                AssegnazioneTurno(
+                    calendario=calendario_mensile,
+                    dipendente_id=dipendente_id,
+                    data=giorno_data,
+                    turno=turno,
+                )
+            )
+
+    AssegnazioneTurno.objects.bulk_create(nuove_assegnazioni)
+    calendario_mensile.stato = CalendarioMensile.STATO_GENERATO
+    calendario_mensile.save()
+
+    return conteggi

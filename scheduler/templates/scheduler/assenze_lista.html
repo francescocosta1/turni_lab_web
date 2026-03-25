@@ -1,0 +1,53 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Assenze{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="top-actions">
+        <div>
+            <h2>Assenze, ferie e malattia</h2>
+            <p class="muted">Gestione delle indisponibilità del personale.</p>
+        </div>
+        <div>
+            <a class="btn" href="{% url 'assenza_nuova' %}">Nuova assenza</a>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-left">Dipendente</th>
+                    <th>Tipo</th>
+                    <th>Data inizio</th>
+                    <th>Data fine</th>
+                    <th class="text-left">Note</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assenza in assenze %}
+                <tr>
+                    <td class="text-left">{{ assenza.dipendente.cognome }} {{ assenza.dipendente.nome }}</td>
+                    <td>{{ assenza.get_tipo_display }}</td>
+                    <td>{{ assenza.data_inizio|date:"d/m/Y" }}</td>
+                    <td>{{ assenza.data_fine|date:"d/m/Y" }}</td>
+                    <td class="text-left">{{ assenza.note|default:"—" }}</td>
+                    <td>
+                        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                            <a class="btn btn-light" href="{% url 'assenza_modifica' assenza.id %}">Modifica</a>
+                            <a class="btn btn-secondary" href="{% url 'assenza_elimina' assenza.id %}">Elimina</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">Nessuna assenza presente.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

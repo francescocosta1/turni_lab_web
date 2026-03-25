@@ -1,0 +1,34 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Area amministratore{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Area amministratore</h2>
+    <p class="muted">Gestione completa della turnistica del laboratorio.</p>
+</div>
+
+<div class="grid">
+
+    <div class="tile">
+        <h3>Calendari</h3>
+        <p>Crea e gestisci i calendari mensili dei turni.</p>
+        <a class="btn" href="{% url 'calendari_lista' %}">Apri calendari</a>
+    </div>
+
+    <div class="tile">
+        <h3>Dipendenti</h3>
+        <p>Gestisci il personale del laboratorio.</p>
+        <a class="btn" href="{% url 'dipendenti_lista' %}">Gestisci dipendenti</a>
+    </div>
+
+    <div class="tile">
+        <h3>Assenze e ferie</h3>
+        <p>Inserisci ferie, malattia, permessi o altre indisponibilità.</p>
+        <a class="btn" href="{% url 'assenze_lista' %}">Gestisci assenze</a>
+    </div>
+
+</div>
+
+{% endblock %}

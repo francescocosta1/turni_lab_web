@@ -1,0 +1,24 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Area dipendente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Area dipendente</h2>
+    <p class="muted">Consultazione dei turni del laboratorio.</p>
+</div>
+
+<div class="grid">
+    <div class="tile">
+        <h3>Turni del mese</h3>
+        <p>Visualizza il calendario mensile completo del laboratorio in modalità di sola lettura.</p>
+        <a class="btn" href="{% url 'dipendente_turni' %}">Apri calendario</a>
+    </div>
+
+    <div class="tile">
+        <h3>I miei turni</h3>
+        <p>Consulta rapidamente solo i tuoi turni del mese corrente.</p>
+        <a class="btn btn-light" href="{% url 'miei_turni' %}">Apri i miei turni</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "scheduler/base.html" %}
+
+{% block title %}Turni del mese{% endblock %}
+
+{% block content %}
+<style>
+    .turno-m {
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-weight: bold;
+    }
+
+    .turno-p {
+        background: #fef3c7;
+        color: #92400e;
+        font-weight: bold;
+    }
+
+    .turno-n {
+        background: #fee2e2;
+        color: #b91c1c;
+        font-weight: bold;
+    }
+
+    .turno-r {
+        background: #e5e7eb;
+        color: #374151;
+        font-weight: bold;
+    }
+
+    .turno-f {
+        background: #dcfce7;
+        color: #166534;
+        font-weight: bold;
+    }
+
+    .turno-a {
+        background: #e0e7ff;
+        color: #3730a3;
+        font-weight: bold;
+    }
+
+    .turno-l {
+        background: #fce7f3;
+        color: #be185d;
+        font-weight: bold;
+    }
+
+    .turno-x {
+        background: #ede9fe;
+        color: #6d28d9;
+        font-weight: bold;
+    }
+
+    .giorno-weekend {
+        background: #f3f4f6 !important;
+    }
+
+    .riga-evidenziata td {
+        background: #ecfeff !important;
+    }
+
+    .cell-dipendente {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 2;
+    }
+
+    .header-dipendente {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #edf3fb;
+    }
+
+    .tabella-calendario th,
+    .tabella-calendario td {
+        min-width: 44px;
+    }
+
+    .tabella-calendario td.cell-dipendente,
+    .tabella-calendario th.header-dipendente {
+        min-width: 180px;
+    }
+</style>
+
+<div class="card">
+    <div class="top-actions">
+        <div>
+            <h2>Turni del mese {{ calendario }}</h2>
+            <p class="muted">Consultazione turni in modalità di sola lettura.</p>
+        </div>
+    </div>
+
+    {% if dipendente_corrente %}
+        <div style="background:#ecfeff; padding:12px 14px; border-radius:10px; margin-bottom:16px;">
+            <strong>Riga evidenziata:</strong> {{ dipendente_corrente.cognome }} {{ dipendente_corrente.nome }}
+        </div>
+    {% endif %}
+
+    <div style="overflow-x:auto;">
+        <table class="tabella-calendario">
+            <thead>
+                <tr>
+                    <th class="text-left header-dipendente">Dipendente</th>
+
+                    {% for g in giorni %}
+                        <th class="{% if g.weekend %}giorno-weekend{% endif %}">
+                            {{ g.sigla }}<br>{{ g.numero }}
+                        </th>
+                    {% endfor %}
+
+                    <th>M</th>
+                    <th>P</th>
+                    <th>N</th>
+                    <th>R</th>
+                    <th>Tot</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for riga in righe %}
+                <tr class="{% if riga.evidenziato %}riga-evidenziata{% endif %}">
+                    <td class="text-left cell-dipendente">
+                        {{ riga.dipendente.cognome }} {{ riga.dipendente.nome }}
+                    </td>
+
+                    {% for turno in riga.turni %}
+                        <td class="
+                            {% if turno.weekend %}giorno-weekend {% endif %}
+                            {% if turno.valore == 'M' %}turno-m{% endif %}
+                            {% if turno.valore == 'P' %}turno-p{% endif %}
+                            {% if turno.valore == 'N' %}turno-n{% endif %}
+                            {% if turno.valore == 'R' %}turno-r{% endif %}
+                            {% if turno.valore == 'F' %}turno-f{% endif %}
+                            {% if turno.valore == 'A' %}turno-a{% endif %}
+                            {% if turno.valore == 'L' %}turno-l{% endif %}
+                            {% if turno.valore == 'X' %}turno-x{% endif %}
+                        ">
+                            {{ turno.valore }}
+                        </td>
+                    {% endfor %}
+
+                    <td>{{ riga.riepilogo.M }}</td>
+                    <td>{{ riga.riepilogo.P }}</td>
+                    <td>{{ riga.riepilogo.N }}</td>
+                    <td>{{ riga.riepilogo.R }}</td>
+                    <td><strong>{{ riga.riepilogo.totale }}</strong></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="40">Nessun turno disponibile.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
